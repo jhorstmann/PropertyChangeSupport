@@ -3,10 +3,11 @@ package net.jhorstmann.propertychangesupport;
 import net.jhorstmann.propertychangesupport.api.PropertyChangeEventSource;
 import java.beans.Introspector;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import static org.objectweb.asm.Opcodes.*;
 import org.objectweb.asm.Type;
@@ -23,28 +24,11 @@ public class PropertyChangeSupportAdapter extends ClassAdapter {
         this.propertyChangeSupportField = "_propertyChangeSupport";
     }
 
-    private String[] addEventSourceInterface(String[] interfaces) {
-        String eventSourceDesc = PropertyChangeEventSource.class.getName().replace('.', '/');
-        boolean implementsEventSource = false;
-        for (String desc : interfaces) {
-            if (eventSourceDesc.equals(desc)) {
-                implementsEventSource = true;
-                break;
-            }
-        }
-        String[] newinterfaces;
-        if (implementsEventSource) {
-            newinterfaces = interfaces;
-        } else {
-            newinterfaces = Arrays.copyOf(interfaces, interfaces.length + 1);
-            newinterfaces[interfaces.length] = eventSourceDesc;
-        }
-        return newinterfaces;
-    }
-
     @Override
     public void visit(final int version, final int access, final String classname, final String signature, final String superName, final String[] interfaces) {
-        super.visit(version, access, classname, signature, superName, addEventSourceInterface(interfaces));
+        Set<String> newinterfaces = new HashSet<String>(Arrays.asList(interfaces));
+        newinterfaces.add(PropertyChangeEventSource.class.getName().replace('.', '/'));
+        super.visit(version, access, classname, signature, superName, newinterfaces.toArray(new String[newinterfaces.size()]));
         this.classname = classname;
     }
 
@@ -129,7 +113,6 @@ public class PropertyChangeSupportAdapter extends ClassAdapter {
             final Type type = Type.getArgumentTypes(desc)[0];
             final String arg = type.getDescriptor();
 
-            // rename method by prepending an underscore and make it private
             MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
 
             return new AdviceAdapter(mv, access, name, desc) {
@@ -138,15 +121,13 @@ public class PropertyChangeSupportAdapter extends ClassAdapter {
                 @Override
                 public void onMethodEnter() {
                     oldValue = super.newLocal(type);
-                    System.out.println(oldValue);
-                    visitVarInsn(ALOAD, 0);
+                    loadThis();
                     visitMethodInsn(INVOKEVIRTUAL, classname, getter, "()" + arg);
                     storeLocal(oldValue, type);
                 }
 
                 @Override
                 public void onMethodExit(int opcode) {
-                    //visitVarInsn(ALOAD, 0);
                     loadThis();
                     visitFieldInsn(GETFIELD, classname, propertyChangeSupportField, "Ljava/beans/PropertyChangeSupport;");
                     // Stack: _propertyChangeSupport
