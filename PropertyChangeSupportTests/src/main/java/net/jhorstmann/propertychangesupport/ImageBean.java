@@ -22,14 +22,7 @@ public class ImageBean {
     }
 
     public void setAlt(String alt) {
-        String tmp = this.alt;
         this.alt = alt;
-        if (Math.random()==0.0) {
-             return;
-        } else {
-            System.out.println( tmp);
-        }
-
     }
 
     public String getAlt() {
@@ -37,7 +30,11 @@ public class ImageBean {
     }
 
     public void setWidth(int width) {
+        String before = "before : " + this.width;
+        System.out.println(before);
         this.width = width;
+        String after  = "after  : " + this.width;
+        System.out.println(after);
     }
 
     public int getWidth() {
