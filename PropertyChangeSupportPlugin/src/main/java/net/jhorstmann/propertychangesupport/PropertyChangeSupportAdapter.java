@@ -120,6 +120,8 @@ public class PropertyChangeSupportAdapter extends ClassAdapter {
 
                 @Override
                 public void onMethodEnter() {
+                    // create new local variable, it seems this can only be used
+                    // with storeLocal and loadLocal instead of visitVarInsn(*LOAD)
                     oldValue = super.newLocal(type);
                     loadThis();
                     visitMethodInsn(INVOKEVIRTUAL, classname, getter, "()" + arg);
